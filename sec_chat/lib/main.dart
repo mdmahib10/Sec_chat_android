@@ -34,6 +34,8 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   List<String> messages = [];
   final TextEditingController _textController = TextEditingController();
+  final TextEditingController _serverIpController =
+      TextEditingController(text: "localhost");
   final ScrollController _scrollCon = ScrollController();
 
   void _messageTake(String message) {
@@ -55,28 +57,39 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    soc_server.serverConnect();
-    messageListen();
+  }
+
+  void _connectToServer() {
+    final serverIp = _serverIpController.text;
+    if (serverIp.isNotEmpty) {
+      soc_server.serverConnect(serverIp);
+      messageListen();
+    }
   }
 
   @override
   void dispose() {
-    soc_server.socket.dispose();
+    soc_server.socket?.dispose();
+    _textController.dispose();
+    _serverIpController.dispose();
+    _scrollCon.dispose();
     super.dispose();
   }
 
   void messageListen() {
-    soc_server.socket.on('chat', (data) {
-      setState(() {
-        messages.add(data);
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _scrollCon.animateTo(
-            _scrollCon.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          );
+    soc_server.socket?.on('chat', (data) {
+      if (mounted) {
+        setState(() {
+          messages.add(data);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollCon.animateTo(
+              _scrollCon.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+            );
+          });
         });
-      });
+      }
     });
   }
 
@@ -84,52 +97,75 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 200,
-
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-
-        title: Text(
-          'Sec Chat',
-          style: TextStyle(fontSize: 30),
-          textAlign: TextAlign.center,
-        ),
+        title: Text(widget.title),
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          BottomAppBar(
-            child: TextField(
-              controller: _textController,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-
-                //contentPadding: EdgeInsets.all(8),
-                labelText: 'Type a message',
+      body: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _serverIpController,
+                    decoration: const InputDecoration(
+                      labelText: 'Server IP',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: _connectToServer,
+                  child: const Text('Connect'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: ListView.builder(
+                controller: _scrollCon,
+                itemCount: messages.length,
+                itemBuilder: (context, index) {
+                  return ListTile(title: SelectableText(messages[index]));
+                },
               ),
             ),
-          ),
-          Flexible(
-            child: ListView.builder(
-              reverse: true,
-              controller: _scrollCon,
-              itemCount: messages.length,
-              itemBuilder: (context, index) {
-                return ListTile(title: SelectableText(messages[index]));
-              },
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _textController,
+                    decoration: const InputDecoration(
+                      labelText: 'Type a message',
+                      border: OutlineInputBorder(),
+                    ),
+                    onSubmitted: (message) {
+                      if (message.isNotEmpty) {
+                        soc_server.msgSend(message);
+                        _messageTake(message);
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.send),
+                  onPressed: () {
+                    final message = _textController.text;
+                    if (message.isNotEmpty) {
+                      soc_server.msgSend(message);
+                      _messageTake(message);
+                    }
+                  },
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          final message = _textController.text;
-          if (message.isNotEmpty) {
-            soc_server.msgSend(message);
-            _messageTake(message);
-          }
-        },
-        tooltip: 'Send message',
-        child: const Icon(Icons.send),
+          ],
+        ),
       ),
     );
   }
