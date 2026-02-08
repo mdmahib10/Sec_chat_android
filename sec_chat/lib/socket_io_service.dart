@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 IO.Socket? socket;
+final StreamController<String> connectionStatusController =
+    StreamController<String>.broadcast();
 
 void serverConnect(String serverAdd) {
   if (socket?.connected ?? false) {
@@ -17,11 +20,21 @@ void serverConnect(String serverAdd) {
   socket?.connect();
   socket?.onConnect((_) {
     print('connected to server');
+    connectionStatusController.add('Connected to server');
   });
 
-  socket?.onDisconnect((_) => print('Disconnected from server...'));
-  socket?.onConnectError((_) => print('Connection error ...'));
-  socket?.onError((data) => print('Error: $data'));
+  socket?.onDisconnect((_) {
+    print('Disconnected from server...');
+    connectionStatusController.add('Disconnected from server');
+  });
+  socket?.onConnectError((data) {
+    print('Connection error ...');
+    connectionStatusController.add('Connection error: $data');
+  });
+  socket?.onError((data) {
+    print('Error: $data');
+    connectionStatusController.add('Error: $data');
+  });
 }
 
 void msgSend(String msg) {

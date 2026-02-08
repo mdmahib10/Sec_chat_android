@@ -1,3 +1,8 @@
+
+
+
+
+
 import 'package:flutter/material.dart';
 import 'socket_io_service.dart' as soc_server;
 
@@ -57,6 +62,14 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
+    // Listen to connection status changes
+    soc_server.connectionStatusController.stream.listen((status) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(status)),
+        );
+      }
+    });
   }
 
   void _connectToServer() {

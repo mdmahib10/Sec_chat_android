@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.example.sec_chat"
     compileSdk = 34
-    ndkVersion = "29.0.13599879"
+    buildToolsVersion = "34.0.0"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -28,7 +28,6 @@ android {
         targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        ndkVersion = "29.0.13599879"
     }
 
     buildTypes {
